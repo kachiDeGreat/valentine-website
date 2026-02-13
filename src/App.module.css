@@ -107,6 +107,77 @@
   }
 }
 
+/* --- PHASE 1.5: SLIDESHOW --- */
+.slideshowContainer {
+  margin-top: -100px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  position: relative;
+  z-index: 10;
+}
+
+.slideWrapper {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+}
+
+.loader {
+  width: 48px;
+  height: 48px;
+  border: 5px solid #ff4d6d;
+  border-bottom-color: transparent;
+  border-radius: 50%;
+  display: inline-block;
+  box-sizing: border-box;
+  animation: rotation 1s linear infinite;
+  position: absolute;
+  z-index: 5;
+}
+
+.slideMedia {
+  max-width: 90%;
+  max-height: 60vh;
+  border-radius: 15px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  object-fit: contain;
+}
+
+.skipBtn {
+  margin-top: -150px;
+  background: rgba(255, 255, 255, 0.9);
+  color: #ff4d6d;
+  border: none;
+  padding: 12px 25px;
+  border-radius: 50px;
+  font-weight: bold;
+  cursor: pointer;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+  animation: fadeIn 0.5s ease;
+  transition: transform 0.2s;
+  z-index: 99999999;
+}
+
+.skipBtn:hover {
+  transform: scale(1.05);
+}
+
+@keyframes rotation {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
 /* --- PHASE 2: THE SEQUENTIAL ENVELOPE --- */
 .envelopeWrapper {
   display: flex;

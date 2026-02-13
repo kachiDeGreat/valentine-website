@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import styles from "./App.module.css";
 import confetti from "canvas-confetti";
 
@@ -14,8 +15,66 @@ const MESSAGES: Record<string, { display: string; text: string }> = {
   },
 };
 
+const UGOMMA_SLIDES = [
+  { type: "image", src: "/ugomma1.jpg" },
+  { type: "image", src: "/ugomma2.jpg" },
+  { type: "video", src: "/ugomma.mp4" },
+];
+
+const EYARE_SLIDES = [
+  { type: "image", src: "/eyare1.jpg" },
+  { type: "image", src: "/eyare2.jpg" },
+  { type: "image", src: "/eyare3.jpg" },
+];
+
+const Slide = ({
+  slide,
+  onVideoEnd,
+}: {
+  slide: { type: string; src: string };
+  onVideoEnd: () => void;
+}) => {
+  const [loaded, setLoaded] = useState(false);
+
+  return (
+    <motion.div
+      className={styles.slideWrapper}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.5 }}
+    >
+      {!loaded && <div className={styles.loader} />}
+      {slide.type === "image" ? (
+        <motion.img
+          src={slide.src}
+          alt="Slide"
+          className={styles.slideMedia}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: loaded ? 1 : 0 }}
+          transition={{ duration: 0.5 }}
+          onLoad={() => setLoaded(true)}
+          loading="lazy"
+        />
+      ) : (
+        <motion.video
+          src={slide.src}
+          className={styles.slideMedia}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: loaded ? 1 : 0 }}
+          transition={{ duration: 0.5 }}
+          autoPlay
+          muted
+          onEnded={onVideoEnd}
+          onLoadedData={() => setLoaded(true)}
+        />
+      )}
+    </motion.div>
+  );
+};
+
 export default function App() {
-  const [step, setStep] = useState<"input" | "envelope">("input");
+  const [step, setStep] = useState<"input" | "slideshow" | "envelope">("input");
   const [name, setName] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
   const [messageData, setMessageData] = useState<{
@@ -24,6 +83,46 @@ export default function App() {
   } | null>(null);
 
   const [isOpen, setIsOpen] = useState(false);
+  const [slideIndex, setSlideIndex] = useState(0);
+  const [showSkip, setShowSkip] = useState(false);
+  const [slides, setSlides] = useState(UGOMMA_SLIDES);
+
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.volume = 0.5;
+    }
+
+    // Fallback: Play on first interaction if autoplay was blocked
+    const handleInteraction = () => {
+      audioRef.current?.play().catch(() => {});
+      document.removeEventListener("click", handleInteraction);
+      document.removeEventListener("keydown", handleInteraction);
+    };
+
+    document.addEventListener("click", handleInteraction);
+    document.addEventListener("keydown", handleInteraction);
+
+    return () => {
+      document.removeEventListener("click", handleInteraction);
+      document.removeEventListener("keydown", handleInteraction);
+    };
+  }, []);
+
+  // --- SLIDESHOW TIMER ---
+  useEffect(() => {
+    if (step === "slideshow") {
+      const currentSlide = slides[slideIndex];
+      if (currentSlide.type === "image") {
+        const timer = setTimeout(() => {
+          setSlideIndex((prev) => (prev + 1) % slides.length);
+        }, 4000);
+        return () => clearTimeout(timer);
+      }
+      // If video, we stop auto-advance to let it play. User uses Skip button.
+    }
+  }, [step, slideIndex, slides]);
 
   // --- HANDLE INPUT ---
   const handleUnlock = (e: React.FormEvent) => {
@@ -42,7 +141,24 @@ export default function App() {
     if (data) {
       setMessageData({ title: data.display, body: data.text });
       setErrorMsg("");
-      setStep("envelope");
+
+      if (clean === "ugomma") {
+        setSlides(UGOMMA_SLIDES);
+        setStep("slideshow");
+        audioRef.current?.play().catch(() => {});
+        setTimeout(() => {
+          setShowSkip(true);
+        }, 3000);
+      } else if (clean === "eyare") {
+        setSlides(EYARE_SLIDES);
+        setStep("slideshow");
+        audioRef.current?.play().catch(() => {});
+        setTimeout(() => {
+          setShowSkip(true);
+        }, 3000);
+      } else {
+        setStep("envelope");
+      }
     } else {
       setErrorMsg("Access Denied. Name not on the guest list. 🔒");
       triggerShake();
@@ -93,6 +209,13 @@ export default function App() {
 
   return (
     <div className={styles.container}>
+      <audio
+        ref={audioRef}
+        src="/Laufey - Lucky for Me (Official Audio).mp3"
+        autoPlay
+        loop
+      />
+
       {step === "input" ? (
         // --- PHASE 1: THE INPUT ---
         <div className={styles.glassCard}>
@@ -115,6 +238,27 @@ export default function App() {
               Confirm Identity
             </button>
           </form>
+        </div>
+      ) : step === "slideshow" ? (
+        // --- PHASE 1.5: SLIDESHOW (UGOMMA) ---
+        <div className={styles.slideshowContainer}>
+          <AnimatePresence mode="wait">
+            <Slide
+              key={slideIndex}
+              slide={slides[slideIndex]}
+              onVideoEnd={() =>
+                setSlideIndex((prev) => (prev + 1) % slides.length)
+              }
+            />
+          </AnimatePresence>
+          {showSkip && (
+            <button
+              onClick={() => setStep("envelope")}
+              className={styles.skipBtn}
+            >
+              Skip to Gift 💌
+            </button>
+          )}
         </div>
       ) : (
         // --- PHASE 2: THE SEQUENTIAL ENVELOPE ---
